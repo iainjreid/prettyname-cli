@@ -1,9 +1,53 @@
 #!/bin/sh
 
-if [[ -z $1 ]]; then
+usage() {
   echo "usage: prettyname string"
-  exit 1
+  exit 0
+}
+
+get_first_n_chars() {
+  echo $1 | cut -c 1-${2}
+}
+
+get_last_n_chars() {
+  echo $1 | cut -c $((${#1} - $2))-${#1}
+}
+
+while [[ $# > 0 ]]; do
+  case "$1" in
+    -t|--truncate)
+      TRUNCATE=${2}; shift
+      ;;
+    -te|--truncate-end)
+      TRUNCATE_END=true
+      ;;
+    -ts|--truncate-start)
+      TRUNCATE_START=true
+      ;;
+    -*)
+      echo "Unknown argument: ${1}"; exit 1
+      ;;
+    *)
+      PRETTYPATH=`realpath ${1}`
+  esac
+
+  shift
+done
+
+if [[ -z $PRETTYPATH ]]; then
+  usage
+else
+  PRETTYPATH=${PRETTYPATH/$HOME/\~}
 fi
 
-REALPATH=$(realpath $1) && echo ${REALPATH/$HOME/\~}
+if [[ $TRUNCATE && ${#PRETTYPATH} -gt $TRUNCATE ]]; then
+  if [[ $TRUNCATE_START ]]; then
+    PRETTYPATH=...$(get_last_n_chars $PRETTYPATH $((TRUNCATE - 4)))
+  elif [[ $TRUNCATE_END ]]; then
+    PRETTYPATH=$(get_first_n_chars $PRETTYPATH $((TRUNCATE - 3)))...
+  else
+    PRETTYPATH=$(get_first_n_chars $PRETTYPATH $((TRUNCATE / 2 - 2)))...$(get_last_n_chars $PRETTYPATH $((TRUNCATE / 2 - 2)))
+  fi
+fi
 
+echo $PRETTYPATH
